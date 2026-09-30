@@ -1,0 +1,10 @@
+work/
+*.mp3
+*.mp4
+*.mkv
+*.webm
+*.srt
+frame_*.png
+scenes.log
+.DS_Store
+Thumbs.db
