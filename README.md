@@ -63,9 +63,9 @@ Restart or reload your agent so it rediscovers installed skills.
 The installed path should contain at least:
 
 ```text
-~/.codex/skils/watch/
+~/.codex/skills/watch/
 ├── SKILL.md
-└ ── agents/
+└── agents/
     └── openai.yaml
 ```
 
