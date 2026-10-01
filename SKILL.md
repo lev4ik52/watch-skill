@@ -16,9 +16,9 @@ Use this skill when the user gives a video URL or local video and asks Codex to 
 - For Obsidian, always ask before writing: where to place the note, what style/depth to use, and whether to include raw transcript. Do not write to Obsidian without confirmation.
 - For most Obsidian video intake, store distilled knowledge and links, not raw transcript, unless the user asks for raw transcript.
 
-## Dependencies
+## First-use dependency setup
 
-Check on first use:
+Before processing the first video on a machine, verify all three required command-line tools. Do not skip this bootstrap step:
 
 ```powershell
 Get-Command yt-dlp
@@ -28,19 +28,25 @@ Get-Command whisper
 
 On macOS or Linux, use `command -v yt-dlp ffmpeg whisper` instead.
 
-If something is missing, tell the user which dependency is absent and ask before installing.
+The required tools are:
+
+- `yt-dlp`: video metadata, subtitles, and audio/video downloads.
+- `ffmpeg`: audio extraction and scene-change frame sampling.
+- `whisper`: local transcription fallback when subtitles are missing.
+
+If any command is missing:
+
+1. Tell the user exactly which tools are absent and ask permission to install them and, when necessary, persist their executable directories in the user's `PATH`.
+2. Install only the missing tools using an appropriate trusted package manager or the tool's official distribution method.
+3. Make each executable discoverable from future terminals. Prefer a persistent **user-level** `PATH` entry; do not silently change the system-wide `PATH`.
+4. Start a fresh shell when required, rerun the checks above, and verify each tool with `yt-dlp --version`, `ffmpeg -version`, and `whisper --help`.
+5. Do not begin video processing until all three commands resolve successfully. Once they pass, do not reinstall them on later invocations; only repeat the lightweight availability check.
 
 If YouTube warns that no supported JavaScript runtime was found, use the bundled Codex Node runtime when available:
 
 ```powershell
 yt-dlp --js-runtimes "node:$env:USERPROFILE\Documents\Codex\tools\node-v24.17.0-win-x64\node.exe" --skip-download --print "%(title)s | %(duration)s" "<URL>"
 ```
-
-Known useful tools:
-
-- `yt-dlp`: video metadata, subtitles, audio/video downloads.
-- `ffmpeg`: audio extraction and scene-change frame sampling.
-- `whisper`: local transcription fallback when subtitles are missing.
 
 ## Workflow
 

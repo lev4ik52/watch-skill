@@ -30,7 +30,11 @@ An agent may say it watched the video only after inspecting both the timestamped
 - [`openai-whisper`](https://github.com/openai/whisper) or a compatible `whisper` CLI for local fallback transcription.
 - Enough disk space for temporary audio/video and enough compute for transcription.
 
-The skill does not install dependencies automatically. The agent must report missing tools and ask the user before installing anything.
+### First run: install the three tools and expose them through PATH
+
+On the first invocation, the agent checks for `yt-dlp`, `ffmpeg`, and `whisper` before touching the video. If one is missing, it must identify the missing tool, ask permission to install it, and make the executable available through a persistent user-level `PATH` entry when the installer does not do that automatically. It then opens a fresh shell if necessary and verifies all three commands before continuing.
+
+The agent must not silently change the system-wide `PATH`, and it does not reinstall tools that already pass the availability and version checks.
 
 ## Install
 
