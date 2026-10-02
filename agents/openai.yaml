@@ -1,6 +1,6 @@
 interface:
   display_name: "Watch Videos"
   short_description: "Analyze videos with transcript and frames"
-  default_prompt: "Use $watch to watch this video fully, summarize it with timestamps, and ask me before adding it to Obsidian."
+  default_prompt: "Use $watch to analyze this video completely, cite timestamps, describe important on-screen content, and state any evidence limits."
 policy:
   allow_implicit_invocation: true

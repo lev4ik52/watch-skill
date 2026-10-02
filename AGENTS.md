@@ -1,126 +1,74 @@
-# Guide for AI agents and maintainers
+# Maintainer guide
 
-This repository contains the `watch` agent skill. Treat `SKILL.md` as the normative runtime instruction set. This guide explains the reasoning behind it, the expected behavior, and how to modify or port it without weakening its guarantees.
+This repository contains the `watch` Agent Skill. Treat `SKILL.md` as the runtime contract. Keep conditional commands and recovery procedures in `references/`.
 
 ## Mission
 
-The skill converts a video into grounded, timestamped understanding. A successful run answers both:
+Convert a video into grounded, timestamped understanding of what was said and shown. Prevent transcript-only work from being presented as a complete audiovisual review.
 
-- **What was said?** Captured through subtitles or speech-to-text.
-- **What was shown?** Captured through representative frames selected around visual transitions.
+## Invariants
 
-The central failure the skill prevents is transcript-only analysis being presented as full video review.
+1. Require timestamped speech evidence when speech exists.
+2. Require representative visual evidence for a complete video review.
+3. Label the result as partial when required evidence is unavailable.
+4. Respect authentication, privacy, DRM, paywalls, and share permissions.
+5. Keep media local unless the user authorizes an external transfer.
+6. Ask before installing software or importing browser cookies.
+7. Ask only for missing Obsidian details before writing.
+8. Return synthesis instead of a transcript dump unless the user requests the transcript.
+9. Preserve uncertainty in captions, quotes, names, timestamps, and unreadable visuals.
 
-## Activation
+## Documentation ownership
 
-Use this skill for requests involving a complete video, including watching, transcribing, summarizing, reviewing, extracting lessons, documenting a demo, analyzing a lecture, or preparing an Obsidian note. Supported inputs include:
+- Put runtime routing, invariants, and completion criteria in `SKILL.md`.
+- Put user installation and examples in `README.md`.
+- Put extraction commands in `references/pipeline.md`.
+- Put knowledge-base writing rules in `references/obsidian.md`.
+- Put failure recovery in `references/troubleshooting.md`.
+- Put maintenance and release rules in this file.
 
-- URLs supported by `yt-dlp`;
-- YouTube, Loom, and Zoom share links when access permits;
-- direct media URLs;
-- local video or screen-recording files.
+Do not copy the full workflow into more than one file.
 
-Do not activate it for a static image, an audio-only request that does not need video semantics, or a request that supplies only a transcript and does not ask for video inspection.
+## Change rules
 
-## Non-negotiable invariants
+- Keep the skill name and directory name as `watch`.
+- Keep the frontmatter description precise enough for automatic selection.
+- Use platform-neutral instructions in `SKILL.md`.
+- Label PowerShell and POSIX commands in references.
+- Do not add personal absolute paths.
+- Use the actual downloaded media path. Do not assume an `.mp4` extension.
+- Prefer current official documentation for `yt-dlp`, FFmpeg, and Whisper commands.
+- Do not add uploads, installs, cookie access, or external writes as implicit permissions.
+- Add a reference file only when it prevents conditional detail from bloating `SKILL.md`.
 
-1. **Evidence before claims.** Never say the video was watched unless timestamped speech/text and representative visuals were both inspected.
-2. **No access circumvention.** Respect authentication, privacy, DRM, paywalls, and share permissions.
-3. **Local by default.** Keep downloads, audio, transcripts, frames, and logs in a task-specific temporary folder. Do not upload or publish them without explicit user authorization.
-4. **No surprise installs.** Detect missing dependencies and ask before installing them.
-5. **No surprise knowledge-base writes.** Before writing to Obsidian, confirm the destination, note form/depth, and raw-transcript policy.
-6. **Distill by default.** Return useful synthesis, not a transcript dump, unless the user asks for the raw transcript.
-7. **Preserve uncertainty.** Call out missing segments, unreliable captions, inaccessible visuals, or claims that cannot be verified from the video.
+## Review matrix
 
-## Pipeline and decision logic
+Test these cases when the environment permits:
 
-### 1. Classify the source
+1. Public URL with creator subtitles.
+2. Public URL with automatic subtitles only.
+3. Public URL with no subtitles and local Whisper fallback.
+4. Local video file.
+5. Silent or nearly silent video.
+6. Long video with static slides or UI.
+7. Private or login-gated link.
+8. Failed codec or unsupported container.
+9. Obsidian request with all details supplied.
+10. Obsidian request with one or more details missing.
 
-Determine whether the input is a supported web URL, a direct media URL, or a local file. For a URL, inspect metadata before downloading the full video. Record the canonical page URL, title, creator/uploader, duration, upload date when available, and subtitle inventory.
+For each case, verify the source status, timestamps, visual coverage, limitation wording, and absence of unauthorized external actions.
 
-If access fails, distinguish the cause: unsupported extractor, unavailable video, authentication requirement, private share, network failure, or media restriction. Report the specific obstacle rather than claiming the content is missing.
+## Release checklist
 
-### 2. Establish a timestamped speech channel
+- Validate YAML frontmatter and repository paths.
+- Check internal Markdown links.
+- Search for personal paths, placeholders, and stale filenames.
+- Verify commands against current upstream documentation.
+- Run a no-network smoke review of the skill package.
+- Test at least one realistic URL and one local file when tools and access are available.
+- Confirm that `agents/openai.yaml` matches the skill behavior.
+- Review the final diff before committing.
 
-Prefer creator-provided subtitles, then automatic subtitles, because they are usually cheaper and preserve timestamps. Prefer languages requested by the user; otherwise try the video's primary language and useful fallbacks.
+## Definition of done
 
-If subtitles are absent or unusable, extract audio and run local Whisper. Do not hard-code Russian when the language is unknown. Retain SRT or an equivalent timestamped format. If recognition quality is poor, state why and avoid false precision in quotes.
-
-### 3. Establish a visual channel
-
-Download or use the local video, then select frames on scene changes. The default scene threshold in `SKILL.md` is a starting point:
-
-- lower it for slowly changing slides or subtle UI transitions;
-- raise it for noisy footage or rapid animation;
-- reduce near-duplicates when the result is too large;
-- preserve major transitions and visually information-dense frames.
-
-Aim for a representative set, not an arbitrary fixed count. The `about 150` guidance is a practical ceiling for long videos, not a success criterion.
-
-### 4. Fuse the channels
-
-Align visual moments with nearby transcript timestamps. Look specifically for information that speech alone cannot express:
-
-- code and terminal output;
-- UI labels, states, and user actions;
-- slide headings, diagrams, equations, tables, and charts;
-- visual comparisons, before/after states, errors, warnings, and demonstrations;
-- contradictions between narration and what is displayed.
-
-Do not infer unreadable text. Mark uncertain interpretations as uncertain.
-
-### 5. Produce the answer
-
-The default report contains:
-
-- a 3–5 line TL;DR;
-- key concepts with timestamps;
-- important on-screen content and why it matters;
-- notable claims, warnings, or decisions with timestamps;
-- gaps, uncertainties, and useful follow-up questions.
-
-Adapt depth to the user's request. A tutorial may need ordered steps; a lecture may need argument structure; a product demo may need features, UI behavior, and limitations; a meeting may need decisions and action items. Preserve the evidence requirements in every mode.
-
-## Obsidian behavior
-
-Preparation and writing are separate permissions. The skill may propose a note structure without authorization, but it must not write to a vault until the user has answered:
-
-1. Which vault, folder, or existing note?
-2. What note type and depth?
-3. Should the raw transcript be included, linked, or omitted?
-
-After confirmation, create concise Markdown with source metadata, timestamps, synthesis, and relevant internal links. Prefer distilled knowledge over archival transcript unless the user explicitly wants the transcript.
-
-## Resource and privacy considerations
-
-Video processing can consume bandwidth, disk space, CPU/GPU time, and context. Inspect metadata first, prefer subtitles over transcription, cap resolution when full quality is unnecessary, and clean temporary artifacts only when deletion is authorized and safe. Never expose private media or transcript content in logs, public repositories, or third-party services without permission.
-
-## Porting to another agent framework
-
-The behavior is framework-agnostic even if packaging differs. A port must preserve:
-
-- precise activation criteria;
-- the transcript-first/fallback decision tree;
-- scene-change visual sampling;
-- dual-channel evidence before a "watched" claim;
-- local/private defaults and authorization boundaries;
-- timestamped, evidence-linked output.
-
-Map `agents/openai.yaml` to the target framework's UI metadata and invocation policy. Keep `SKILL.md` or its equivalent as the concise runtime entrypoint; keep this guide as maintainer context rather than injecting it into every run.
-
-## Maintenance checklist
-
-When changing the skill:
-
-- keep the YAML frontmatter valid and the folder/name as `watch`;
-- make the description discriminating enough for automatic discovery;
-- verify example commands against current `yt-dlp`, FFmpeg, and Whisper CLIs;
-- keep operating-system-specific commands clearly labeled;
-- do not replace a real safety invariant with vague advice;
-- do not add tools, uploads, installs, or external writes as implicit permissions;
-- validate the skill package and test at least one realistic URL and one local-file path when the environment permits;
-- document material behavior changes in the repository or release notes.
-
-## Definition of done for a real video task
-
-A run is complete when the source and access status are known, a timestamped speech representation exists, representative visuals were inspected, the two evidence channels were synthesized, limitations are disclosed, and the requested report or confirmed knowledge-base artifact is delivered. Metadata-only inspection is not completion.
+A release is ready when the package validates, references are reachable, and commands use current interfaces. The review matrix must have no known critical gap. The documentation must preserve every invariant above.
